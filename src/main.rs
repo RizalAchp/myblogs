@@ -3,11 +3,16 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 mod components;
-mod pages;
-use pages::notfound::PageNotFound;
 mod contents;
+mod pages;
+mod util;
+use pages::aboutdeeper::PageAboutDeeper;
+use pages::aboutpage::PageAbout;
+use pages::home::PageHome;
+use pages::notfound::PageNotFound;
+use pages::projects::PageProjects;
 
-#[derive(Routable,PartialEq, Clone, Debug)]
+#[derive(Routable, PartialEq, Clone, Debug)]
 pub enum Route {
     #[at("/projects")]
     Projects,
@@ -24,10 +29,10 @@ pub enum Route {
 
 pub fn switchs(routes: &Route) -> Html {
     match routes {
-        Route::Home => html! {},
-        Route::Projects => html! {},
-        Route::AboutMe => html! {},
-        Route::AboutMeDeeper => html! {},
+        Route::Home => html! { <PageHome /> },
+        Route::Projects => html! { <PageProjects /> },
+        Route::AboutMe => html! { <PageAbout />},
+        Route::AboutMeDeeper => html! { <PageAboutDeeper /> },
 
         Route::NotFound => {
             html! { <PageNotFound /> }
@@ -133,3 +138,4 @@ impl App {
 fn main() {
     yew::start_app::<App>();
 }
+

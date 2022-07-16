@@ -1,11 +1,11 @@
 use crate::contents::AboutMe;
 use yew::prelude::*;
 
-pub struct PageAbout {
+pub struct PageAboutDeeper {
     aboutme: AboutMe,
 }
 
-impl Component for PageAbout{
+impl Component for PageAboutDeeper {
     type Message = ();
     type Properties = ();
 

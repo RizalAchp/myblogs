@@ -1,8 +1,10 @@
-use serde_derive::{Deserialize, Serialize};
-const ABOUTME: &str = include_str!("../data/aboutme.txt");
-const ABOUT_CONTENT: &str = include_str!("../data/about.txt");
+pub use crate::util::mdparser::{parse_markdown, Head, Markdowns, ImageLink};
+use yew::prelude::*;
 
-#[derive(Debug, Serialize, Deserialize)]
+const ABOUTME: &str = include_str!("../data/aboutme.txt");
+const CONTENT: &str = include_str!("../data/contents.md");
+
+#[derive(Clone, Debug, PartialEq, Properties)]
 pub struct AboutMe {
     pub name: String,
     pub age: i32,
@@ -11,64 +13,125 @@ pub struct AboutMe {
     pub hobby: Vec<String>,
     pub hastags: Vec<String>,
     pub image_url: String,
-    pub abouts: String
+    pub abouts: String,
 }
 
 impl AboutMe {
     pub fn new() -> Self {
-        Self {
-            name: String::new(),
-            age: 0,
-            work: String::new(),
-            education: String::new(),
-            hobby: Vec::new(),
-            hastags: Vec::new(),
-            image_url: String::new(),
-            abouts: String::new()
-        }
-    }
-    pub fn from(arg: Vec<&str>) -> Self {
-        if arg.len() < 8 {
+        let items = ABOUTME
+            .split('\n')
+            .map(|v| match v.split('=').collect::<Vec<_>>().last() {
+                Some(expr) => expr.trim(),
+                None => "None",
+            })
+            .filter(|f| !f.is_empty())
+            .collect::<Vec<_>>();
+
+        if items.len() < 8 {
             return AboutMe::new();
         }
         Self {
-            name: arg[0].to_string(),
-            age: match arg[1].parse::<i32>() {
+            name: items[0].to_string(),
+            age: match items[1].parse::<i32>() {
                 Ok(n) => n,
                 Err(_) => 0,
             },
-            work: arg[2].to_string(),
-            education: arg[3].to_string(),
-            hobby: arg[4].split(',').map(|s| s.to_string()).collect::<Vec<_>>(),
-            hastags: arg[5].split(',').map(|s| s.to_string()).collect::<Vec<_>>(),
-            image_url: arg[6].to_string(),
-            abouts: arg[7].to_string()
+            work: items[2].to_string(),
+            education: items[3].to_string(),
+            hobby: items[4]
+                .split(',')
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>(),
+            hastags: items[5]
+                .split(',')
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>(),
+            image_url: items[6].to_string(),
+            abouts: items[7].to_string(),
         }
     }
 }
 
-pub fn about_me() -> AboutMe {
-    let items = ABOUTME
-        .split('\n')
-        .map(|v| match v.split('=').collect::<Vec<_>>().last() {
-            Some(expr) => expr.trim(),
-            None => "None",
-        })
-        .filter(|f| !f.is_empty())
-        .collect::<Vec<_>>();
+#[derive(Clone, Debug, PartialEq, Properties)]
+pub struct LinkName {
+    name: String,
+    link: String,
+}
+impl LinkName {
+    fn new() -> Self {
+        Self {
+            name: String::new(),
+            link: String::new(),
+        }
+    }
+    fn from(name: String, link: String) -> Self {
+        Self { name, link }
+    }
 
-    AboutMe::from(items)
+    fn push(&mut self, _self: Self) {
+        self.name = _self.name;
+        self.link = _self.link;
+    }
 }
 
+#[derive(Clone, Debug, PartialEq, Properties)]
+pub struct Contents {
+    pub name: String,
+    pub isi: String,
+    pub linkrepo: LinkName,
+    pub imageurl: ImageLink,
+}
 
-fn title_case(word: &str) -> String {
-    let idx = match word.chars().next() {
-        Some(c) => c.len_utf8(),
-        None => 0,
-    };
+impl Contents {
+    pub fn from(item: Vec<Markdowns>) -> Self {
+        let mut isi = String::new();
+        let mut name = String::new();
+        let mut linkrepo = LinkName::new();
+        let mut imageurl = ImageLink::new();
 
-    let mut result = String::with_capacity(word.len());
-    result.push_str(&word[..idx].to_uppercase());
-    result.push_str(&word[idx..]);
-    result
+        println!("len in vec {}", item.len());
+        let _ = item.into_iter().map(|x| match x {
+            Markdowns::Headers(Head::H2(s)) => {
+                name.push_str(&s);
+                s.to_string()
+            },
+            Markdowns::Paragraphs(s) => {
+                isi.push_str(&s);
+                s.to_string()
+            },
+            Markdowns::Link(s,d) =>{
+                linkrepo.push(LinkName{name: s.to_string(), link:d.to_string()});
+                s.to_string()
+            },
+            Markdowns::Image(s) => {
+                imageurl.push(s);
+                s.name.to_string()
+            }
+            _ => String::new(),
+        }).collect::<Vec<_>>();
+
+        Self {
+            name,
+            isi,
+            linkrepo,
+            imageurl,
+        }
+    }
+}
+
+pub fn get_contents() -> Vec<Contents> {
+    parse_markdown(CONTENT).into_iter().map(|dt| Contents::from(dt)).collect::<Vec<_>>()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::contents::get_contents;
+    #[test]
+    fn test_datacontents() {
+        let cntns = get_contents();
+        for content in cntns {
+            println!("{:#?}", content)
+        }
+        assert!(false, "is just testring")
+    }
 }
