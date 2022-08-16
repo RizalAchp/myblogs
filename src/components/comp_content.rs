@@ -1,25 +1,22 @@
-use crate::contents::Contents;
+use crate::contents::ContentItem;
 use yew::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct Props {
-    pub content: Contents,
+    pub content: ContentItem,
 }
 
 pub struct ContentsCard {
-    contents: Contents,
+    contents: ContentItem,
 }
 impl Component for ContentsCard {
     type Message = ();
-    type Properties = ();
+    type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let contents = ctx.props().content;
-        Self { contents }
-    }
-
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
-        true
+        Self {
+            contents: ctx.props().content.clone(),
+        }
     }
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
@@ -27,19 +24,23 @@ impl Component for ContentsCard {
         html! {
             <div class="card">
                 <div class="card-content">
-                    <div class="media">
-                        <div class="media-left">
-                            <figure class="image is-128x128">
-                                <img alt={contents.imageurl.name.clone()} src={contents.imageurl.link.clone()} />
-                            </figure>
-                        </div>
-                        <div class="media-content">
-                            <p class="title is-3">{ &contents.name.clone() }</p>
-                            <p>
-                                <b>{ contents.isi.clone() }</b>
-                            </p>
-                        </div>
+                <div class="media">
+                    <div class="media-left">
+                    <figure class="image is-48x48">
+                        <img src="https://bulma.io/images/placeholders/96x96.png" alt="Placeholder image"/>
+                    </figure>
                     </div>
+                    <div class="media-content">
+                    { contents.name.as_ref().unwrap().clone()}
+                    <p class="subtitle is-6">{ contents.link.as_ref().unwrap().clone()}</p>
+                    </div>
+                </div>
+
+                <div class="content">
+                {
+                    contents.isi.as_ref().unwrap().clone()
+                }
+                </div>
                 </div>
             </div>
         }

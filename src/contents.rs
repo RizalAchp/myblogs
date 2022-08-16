@@ -1,10 +1,13 @@
-pub use crate::util::mdparser::{parse_markdown, Head, Markdowns, ImageLink};
-use yew::prelude::*;
+#![allow(dead_code)]
 
-const ABOUTME: &str = include_str!("../data/aboutme.txt");
-const CONTENT: &str = include_str!("../data/contents.md");
+use crate::markdown_parser::{html, markdown_parse, Html, Markdown, MarkdownInline};
+use crate::translate::*;
+// use crate::translate::*;
 
-#[derive(Clone, Debug, PartialEq, Properties)]
+pub const ABOUTME: &str = include_str!("../data/aboutme.txt");
+pub const CONTENT: &str = include_str!("../data/contents.md");
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct AboutMe {
     pub name: String,
     pub age: i32,
@@ -52,86 +55,94 @@ impl AboutMe {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Properties)]
-pub struct LinkName {
-    name: String,
-    link: String,
+#[derive(Clone, Debug, PartialEq)]
+pub struct ContentItem {
+    pub name: Option<Html>,
+    pub isi: Option<Html>,
+    pub link: Option<Html>,
+    pub image: Option<Html>,
 }
-impl LinkName {
-    fn new() -> Self {
+impl ContentItem {
+    pub fn new() -> Self {
         Self {
-            name: String::new(),
-            link: String::new(),
+            name: None,
+            isi: None,
+            link: None,
+            image: None,
         }
     }
-    fn from(name: String, link: String) -> Self {
-        Self { name, link }
-    }
 
-    fn push(&mut self, _self: Self) {
-        self.name = _self.name;
-        self.link = _self.link;
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Properties)]
-pub struct Contents {
-    pub name: String,
-    pub isi: String,
-    pub linkrepo: LinkName,
-    pub imageurl: ImageLink,
-}
-
-impl Contents {
-    pub fn from(item: Vec<Markdowns>) -> Self {
-        let mut isi = String::new();
-        let mut name = String::new();
-        let mut linkrepo = LinkName::new();
-        let mut imageurl = ImageLink::new();
-
-        println!("len in vec {}", item.len());
-        let _ = item.into_iter().map(|x| match x {
-            Markdowns::Headers(Head::H2(s)) => {
-                name.push_str(&s);
-                s.to_string()
-            },
-            Markdowns::Paragraphs(s) => {
-                isi.push_str(&s);
-                s.to_string()
-            },
-            Markdowns::Link(s,d) =>{
-                linkrepo.push(LinkName{name: s.to_string(), link:d.to_string()});
-                s.to_string()
-            },
-            Markdowns::Image(s) => {
-                imageurl.push(s);
-                s.name.to_string()
+    pub fn from(markdown_str: &str) -> Self {
+        let mut content: ContentItem = ContentItem::new();
+        match markdown_parse(markdown_str) {
+            Some((_, _cntn_md)) => {
+                println!("{:?}", _cntn_md);
+                content.name = Some(html! { for _cntn_md.iter().filter_map(|md| match md {
+                    Markdown::Heading(size, md)=> Some(translate_header(*size, md.to_vec())),
+                    _ => None,
+                }) });
+                let line = _cntn_md.iter().filter_map(|md| match md {
+                    Markdown::Line(text) => Some(text),
+                    _ => None,
+                });
+                content.isi = Some(html! { for line.clone().map(|mdvec| {
+                    html! { for mdvec.into_iter().filter_map(|md| match md {
+                        MarkdownInline::Bold(_str)=> Some(translate_boldtext(_str.to_string())),
+                        MarkdownInline::Italic(_str) => Some(translate_italic(_str.to_string())),
+                        MarkdownInline::Plaintext(_str) => Some(html!{ _str.to_string() }),
+                        _ => None
+                    })}
+                })});
+                content.link = Some(
+                    html! { for line.clone().map(|md| html! { for md.into_iter().filter_map(|mdline| match mdline {
+                        MarkdownInline::Link(name, link) => Some(translate_link(name.to_string(), link.to_string())),
+                        _ => None
+                    }) }) },
+                );
+                content.image = Some(html! {
+                    for line.clone().map(|md| html! {
+                        for md.into_iter().filter_map(|mdline| match mdline {
+                            MarkdownInline::Image(name, link) => Some(translate_image(name.to_string(), link.to_string())),
+                            _ => None
+                        })
+                    })
+                })
             }
-            _ => String::new(),
-        }).collect::<Vec<_>>();
 
+            None => {}
+        };
         Self {
-            name,
-            isi,
-            linkrepo,
-            imageurl,
+            name: content.name,
+            isi: content.isi,
+            link: content.link,
+            image: content.image,
         }
+    }
+    // add code here
+}
+impl std::fmt::Display for ContentItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "=== content ===")?;
+        writeln!(f, " - name: {:#?}", self.name)?;
+        writeln!(f, " - isi : {:#?}", self.isi)?;
+        writeln!(f, " - link: {:#?}", self.link)?;
+        writeln!(f, " - image: {:#?}", self.image)?;
+        writeln!(f, "===============")
     }
 }
 
-pub fn get_contents() -> Vec<Contents> {
-    parse_markdown(CONTENT).into_iter().map(|dt| Contents::from(dt)).collect::<Vec<_>>()
+#[derive(Clone, Debug, PartialEq)]
+pub struct ContentLists {
+    pub contents: Vec<ContentItem>,
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::contents::get_contents;
-    #[test]
-    fn test_datacontents() {
-        let cntns = get_contents();
-        for content in cntns {
-            println!("{:#?}", content)
-        }
-        assert!(false, "is just testring")
+impl ContentLists {
+    pub fn parse_contents_from_md() -> Self {
+        let contents = CONTENT
+            .split("---")
+            .into_iter()
+            .map(|strmd| ContentItem::from(strmd))
+            .collect();
+        Self { contents }
     }
 }

@@ -37,7 +37,7 @@ impl Component for PageAbout{
                         </div>
                         <div class="tile is-parent">
                             <figure class="tile is-child image is-square">
-                                <img alt="The author's profile picture." src={aboutme.image_url.clone()} />
+                                <img src={aboutme.image_url.clone()}  alt="The author's profile picture." />
                             </figure>
                         </div>
                         <div class="tile is-parent">

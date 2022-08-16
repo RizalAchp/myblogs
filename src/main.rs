@@ -1,16 +1,11 @@
-use yew::html::Scope;
-use yew::prelude::*;
-use yew_router::prelude::*;
-
+#![allow(dead_code)]
 mod components;
 mod contents;
+mod markdown_parser;
 mod pages;
-mod util;
-use pages::aboutdeeper::PageAboutDeeper;
-use pages::aboutpage::PageAbout;
-use pages::home::PageHome;
-use pages::notfound::PageNotFound;
-use pages::projects::PageProjects;
+
+use crate::markdown_parser::*;
+use crate::pages::*;
 
 #[derive(Routable, PartialEq, Clone, Debug)]
 pub enum Route {
@@ -33,10 +28,7 @@ pub fn switchs(routes: &Route) -> Html {
         Route::Projects => html! { <PageProjects /> },
         Route::AboutMe => html! { <PageAbout />},
         Route::AboutMeDeeper => html! { <PageAboutDeeper /> },
-
-        Route::NotFound => {
-            html! { <PageNotFound /> }
-        }
+        Route::NotFound => html! { <PageNotFound /> },
     }
 }
 
@@ -54,7 +46,7 @@ impl Component for App {
 
     fn create(_ctx: &Context<Self>) -> Self {
         Self {
-            navbar_active: false,
+            navbar_active: true,
         }
     }
 
@@ -81,8 +73,6 @@ impl Component for App {
                         <a href="https://yew.rs">{ "Yew" }</a>
                         { " using " }
                         <a href="https://bulma.io">{ "Bulma" }</a>
-                        { " and images from " }
-                        <a href="https://unsplash.com">{ "Unsplash" }</a>
                     </div>
                 </footer>
             </BrowserRouter>
@@ -98,7 +88,7 @@ impl App {
         html! {
             <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
                 <div class="navbar-brand">
-                    <h1 class="navbar-item is-size-3">{ "Yew Blog" }</h1>
+                    <h1 class="navbar-item is-size-3">{ "Rizal Blog" }</h1>
 
                     <button class={classes!("navbar-burger", "burger", active_class)}
                         aria-label="menu" aria-expanded="false"
@@ -117,17 +107,9 @@ impl App {
                         <Link<Route> classes={classes!("navbar-item")} to={Route::Projects}>
                             { "My Projects" }
                         </Link<Route>>
-
-                        <div class="navbar-item has-dropdown is-hoverable">
-                            <div class="navbar-link">
-                                { "More" }
-                            </div>
-                            <div class="navbar-dropdown">
-                                <Link<Route> classes={classes!("navbar-item")} to={Route::AboutMe}>
-                                    { "About Me" }
-                                </Link<Route>>
-                            </div>
-                        </div>
+                        <Link<Route> classes={classes!("navbar-item")} to={Route::AboutMe}>
+                            { "About Me" }
+                        </Link<Route>>
                     </div>
                 </div>
             </nav>
@@ -139,3 +121,9 @@ fn main() {
     yew::start_app::<App>();
 }
 
+fn main2() {
+    let content = contents::ContentLists::parse_contents_from_md();
+    for cntn in content.contents {
+        println!("{}", cntn);
+    }
+}

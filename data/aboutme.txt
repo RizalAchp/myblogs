@@ -4,5 +4,5 @@ work        = None
 education   = a student at a State Polytechnic of Jember
 hobby       = programming, electronics, watch anime,
 hastags     = webassembly, aboutme, biodata, web, gabut
-image_url   = https://avatars.githubusercontent.com/u/81346706?v=4
+image_url   = https://avatars.githubusercontent.com/u/81346706
 about       = halo, nama saya Rizal Achmad Pahlevi, saya lagi gabut, jadi saya membuat web ini dengan menggunakan rust (web assembly) semoga bermanfaat :v walau tidak bermanfaat. keep learning!
