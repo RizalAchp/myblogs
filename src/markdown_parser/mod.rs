@@ -3,7 +3,6 @@ pub mod translate;
 
 pub use yew::html::Scope;
 pub use yew::prelude::*;
-pub use yew_router::prelude::*;
 
 pub type MarkdownText = Vec<MarkdownInline>;
 

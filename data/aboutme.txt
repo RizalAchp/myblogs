@@ -2,7 +2,14 @@ name        = Rizal Achmad Pahlevi
 age         = 18
 work        = None
 education   = a student at a State Polytechnic of Jember
-hobby       = programming, electronics, watch anime,
+hobby       = Embeded & Web Developer
 hastags     = webassembly, aboutme, biodata, web, gabut
 image_url   = https://avatars.githubusercontent.com/u/81346706
-about       = halo, nama saya Rizal Achmad Pahlevi, saya lagi gabut, jadi saya membuat web ini dengan menggunakan rust (web assembly) semoga bermanfaat :v walau tidak bermanfaat. keep learning!
+lang        = [Python:86, C/C++:79, JavaScript:69, Rust:77, Html & Css:69]
+about       = 
+I am an optimistic, candid, responsible and social person.
+I am confident with my thinking analysis that I can convince people with my points.
+I am self-reliant, well behaved and above all, a person of strong character.
+I take initiative whenever the situation arises and come off with flying colours.
+I would like to develop all my existing qualities to the maximum level of perfection,
+as such I would like to go for positive experiences in my life because experience is the best teacher of a human being.

@@ -8,6 +8,17 @@ pub const ABOUTME: &str = include_str!("../data/aboutme.txt");
 pub const CONTENT: &str = include_str!("../data/contents.md");
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct LangCapability {
+    pub name: String,
+    pub percentage: i8,
+}
+impl LangCapability {
+    pub fn percentage(&self) -> String {
+        format!("{}%", self.percentage)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct AboutMe {
     pub name: String,
     pub age: i32,
@@ -16,6 +27,7 @@ pub struct AboutMe {
     pub hobby: Vec<String>,
     pub hastags: Vec<String>,
     pub image_url: String,
+    pub lang: Vec<LangCapability>,
     pub abouts: String,
 }
 
@@ -23,34 +35,58 @@ impl AboutMe {
     pub fn new() -> Self {
         let items = ABOUTME
             .split('\n')
-            .map(|v| match v.split('=').collect::<Vec<_>>().last() {
-                Some(expr) => expr.trim(),
-                None => "None",
+            .filter_map(|v| {
+                if v.contains('=') {
+                    v.split('=').collect::<Vec<_>>().last().cloned()
+                } else {
+                    Some(v.clone())
+                }
             })
-            .filter(|f| !f.is_empty())
             .collect::<Vec<_>>();
 
-        if items.len() < 8 {
-            return AboutMe::new();
-        }
-        Self {
-            name: items[0].to_string(),
-            age: match items[1].parse::<i32>() {
-                Ok(n) => n,
-                Err(_) => 0,
-            },
-            work: items[2].to_string(),
-            education: items[3].to_string(),
-            hobby: items[4]
-                .split(',')
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>(),
-            hastags: items[5]
-                .split(',')
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>(),
-            image_url: items[6].to_string(),
-            abouts: items[7].to_string(),
+        if items.len() <= 8 {
+            Default::default()
+        } else {
+            Self {
+                name: items[0].to_string(),
+                age: match items[1].parse::<i32>() {
+                    Ok(n) => n,
+                    Err(_) => 0,
+                },
+                work: items[2].to_string(),
+                education: items[3].to_string(),
+                hobby: items[4]
+                    .split(',')
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>(),
+                hastags: items[5]
+                    .split(',')
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>(),
+                image_url: items[6].to_string(),
+                lang: items[7]
+                    .trim()
+                    .trim_matches(|x| x == '[' || x == ']')
+                    .split(',')
+                    .map(|lc| {
+                        let lcsplit: Vec<String> = lc.split(':').map(|x| x.to_owned()).collect();
+                        if let (Some(name), Some(percentage)) = (lcsplit.first(), lcsplit.last()) {
+                            LangCapability {
+                                name: name.to_owned(),
+                                percentage: percentage.parse().ok().unwrap_or_default(),
+                            }
+                        } else {
+                            {
+                                LangCapability {
+                                    name: "Unknown".to_owned(),
+                                    percentage: 69,
+                                }
+                            }
+                        }
+                    })
+                    .collect(),
+                abouts: items[8..].join(" "),
+            }
         }
     }
 }
