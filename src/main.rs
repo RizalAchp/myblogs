@@ -7,13 +7,13 @@ mod pages;
 
 use crate::markdown_parser::*;
 use api::{
-    get_languages, reqs_profile, reqs_repos, ApiGithub, LangCapability, ProfileGH, RepoGH, KEY,
+    get_languages, request_get, request_get_full, ApiGithub, LangCapability, ProfileGH, RepoGH,
 };
-use components::about::About;
 use components::landing::Landing;
-use gloo_storage::{LocalStorage, Storage};
+use components::{about::About, lang::Lang};
+use gloo::console::*;
+use gloo::storage::{SessionStorage, Storage};
 use pages::{PageAboutMe, PageNotFound, PageProjects};
-use yew::{html, Component, Context, Html};
 
 pub enum PageRoute {
     Landing,
@@ -24,10 +24,8 @@ pub enum PageRoute {
 
 pub enum Msg {
     ToggleNavbar,
-    SaveToStorage,
-    FetchProfile(ProfileGH),
-    FetchRepo(Vec<RepoGH>),
-    FetchCount(Vec<LangCapability>),
+    FetchDone(ApiGithub),
+    FetchOnProfile(ProfileGH),
 }
 
 pub struct App {
@@ -40,26 +38,58 @@ impl Component for App {
     type Message = Msg;
     type Properties = ();
     fn create(ctx: &Context<Self>) -> Self {
-        let api_data = match LocalStorage::get::<ApiGithub>(KEY) {
-            Ok(data) => data,
-            Err(_) => {
-                ctx.link().send_future(async {
-                    Msg::FetchProfile(reqs_profile().await.unwrap_or_default())
-                });
-                ctx.link().send_future_batch(async {
-                    let repos = reqs_repos().await.unwrap_or_default();
-                    let percent = get_languages(
-                        repos
-                            .into_iter()
-                            .map(|RepoGH { languages_url, .. }| languages_url)
-                            .collect(),
-                    )
-                    .await;
-                    vec![Msg::FetchRepo(repos), Msg::FetchCount(percent)]
-                });
-                Default::default()
-            }
-        };
+        let api_data = SessionStorage::get::<ApiGithub>(api::KEY).unwrap_or_default();
+        if api_data.is_empty() {
+            ctx.link().send_future(async {
+                Msg::FetchOnProfile(
+                    match request_get::<ProfileGH>("users/RizalAchp".to_owned()).await {
+                        Ok(d) => d,
+                        Err(er) => {
+                            console_dbg!(format!(
+                                "Error: {} on request_get profile",
+                                er.to_string()
+                            ));
+                            Default::default()
+                        }
+                    },
+                )
+            });
+            ctx.link().send_future(async {
+                let repository =
+                    match request_get::<Vec<RepoGH>>("users/RizalAchp/repos".to_owned()).await {
+                        Ok(d) => d,
+                        Err(er) => {
+                            console_dbg!(format!("Error: {} on request_get repo", er.to_string()));
+                            Default::default()
+                        }
+                    };
+                let lang_percentage = get_languages(
+                    repository
+                        .clone()
+                        .into_iter()
+                        .filter_map(
+                            |RepoGH {
+                                 languages_url,
+                                 fork,
+                                 ..
+                             }| {
+                                if !fork {
+                                    Some(languages_url)
+                                } else {
+                                    None
+                                }
+                            },
+                        )
+                        .collect(),
+                )
+                .await;
+                Msg::FetchDone(ApiGithub {
+                    repository,
+                    lang_percentage,
+                    ..Default::default()
+                })
+            });
+        }
         Self {
             main_route: PageRoute::Landing,
             navbar_active: false,
@@ -73,23 +103,20 @@ impl Component for App {
                 self.navbar_active = !self.navbar_active;
                 true
             }
-            Msg::SaveToStorage => {
-                LocalStorage::set(KEY, self.api_data).ok();
+            Msg::FetchDone(data) => {
+                self.api_data = data;
+                SessionStorage::set(api::KEY, self.api_data.clone()).ok();
                 true
             }
-            Msg::FetchProfile(item) => {
-                self.api_data.set_profile(item);
-                true
-            }
-            Msg::FetchRepo(item) => {
-                self.api_data.set_repository(item);
-                true
-            }
-            Msg::FetchCount(item) => {
-                self.api_data.lang_percentage = item;
+            Msg::FetchOnProfile(data) => {
+                self.api_data.profile = data;
+                SessionStorage::set(api::KEY, self.api_data.clone()).ok();
                 true
             }
         }
+    }
+    fn destroy(&mut self, _ctx: &Context<Self>) {
+        SessionStorage::set(api::KEY, &self.api_data.clone()).ok();
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
@@ -111,11 +138,19 @@ impl App {
             PageRoute::Landing => yew::html!(
                 <>
                     <Landing id="landing" name={self.api_data.name()}/>
-                    <About id="about"
-                        name={self.api_data.name()}
-                        short_desc={self.api_data.bio()}
-                        lang={self.api_data.lang_percentage}
-                    />
+                    <About id="about" name={self.api_data.name()} short_desc={self.api_data.bio()} >
+                    <>{ if !self.api_data.is_empty() {
+                        html!(for self.api_data
+                            .lang_percentage[..5]
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, lang)| html!(<Lang {idx} lang={lang.clone()}/>)))
+                        }
+                        else {
+                            html!()
+                        }
+                    }</>
+                    </About>
                 </>
             ),
             PageRoute::AboutMe => yew::html!(<PageAboutMe />),
@@ -166,7 +201,7 @@ impl App {
     #[inline]
     fn view_footer(&self, _link: &Scope<Self>) -> Html {
         html! {
-            <footer class="footer p-10 bg-base-300 footer">
+            <footer class="footer p-10 bg-base-300">
                 <div>
                     <svg width="50" height="50" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" class="fill-current"><path d="M22.672 15.226l-2.432.811.841 2.515c.33 1.019-.209 2.127-1.23 2.456-1.15.325-2.148-.321-2.463-1.226l-.84-2.518-5.013 1.677.84 2.517c.391 1.203-.434 2.542-1.831 2.542-.88 0-1.601-.564-1.86-1.314l-.842-2.516-2.431.809c-1.135.328-2.145-.317-2.463-1.229-.329-1.018.211-2.127 1.231-2.456l2.432-.809-1.621-4.823-2.432.808c-1.355.384-2.558-.59-2.558-1.839 0-.817.509-1.582 1.327-1.846l2.433-.809-.842-2.515c-.33-1.02.211-2.129 1.232-2.458 1.02-.329 2.13.209 2.461 1.229l.842 2.515 5.011-1.677-.839-2.517c-.403-1.238.484-2.553 1.843-2.553.819 0 1.585.509 1.85 1.326l.841 2.517 2.431-.81c1.02-.33 2.131.211 2.461 1.229.332 1.018-.21 2.126-1.23 2.456l-2.433.809 1.622 4.823 2.433-.809c1.242-.401 2.557.484 2.557 1.838 0 .819-.51 1.583-1.328 1.847m-8.992-6.428l-5.01 1.675 1.619 4.828 5.011-1.674-1.62-4.829z"></path></svg>
                     <p>{"ACME Industries Ltd."}<br/>{"Providing reliable tech since 1992}"}</p>

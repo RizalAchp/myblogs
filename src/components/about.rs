@@ -1,6 +1,5 @@
+use crate::api::ABOUT_LONG;
 use crate::components::media_social::MediaSocials;
-use crate::LangCapability;
-use crate::contents::ABOUT_LONG;
 use yew::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Properties)]
@@ -8,7 +7,8 @@ pub struct PropsAbout {
     pub id: String,
     pub name: String,
     pub short_desc: String,
-    pub lang: Vec<LangCapability>,
+    #[prop_or_default]
+    pub children: Children,
 }
 
 pub struct About {
@@ -25,22 +25,6 @@ impl Component for About {
     }
     fn view(&self, ctx: &Context<Self>) -> Html {
         let prop = ctx.props();
-        let pct_lang = prop.lang.into_iter().map(|lc| 
-            {
-            let percent = lc.percentage;
-            html!{
-                <div class="pt-6">
-                  <div class="flex items-end justify-between">
-                    <h4 class="font-body font-semibold uppercase text-primary">{lc.name}</h4>
-                    // <h3 class="font-body text-3xl font-bold text-primary stat-value tabular-nums">{percent}</h3>
-                    <span class="font-body text-3xl font-bold text-primary count countdown">
-                        <span style={format!("--value:{};", percent)}></span>{'%'}
-                    </span>
-                  </div>
-                  <progress class="progress progress-primary w-56" value={percent.to_string()} max="100"></progress>
-                </div>
-            }
-          });
         html! {
           <div id={self.id.to_owned()} class="bg-primary-300">
             <div class="flex flex-col w-full lg:flex-row py-16 md:py-20 ">
@@ -64,7 +48,7 @@ impl Component for About {
                 </div>
                 <div class="divider lg:divider-horizontal"></div>
               <div class="grid flex-grow card rounded-box pl-0 pt-10 sm:w-3/4 lg:w-2/5 lg:pl-12 lg:pt-0 lg:mr-10 mx-10">
-                  { for pct_lang }
+                { prop.children.clone() }
               </div>
             </div>
           </div>

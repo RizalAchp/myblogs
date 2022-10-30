@@ -1,0 +1,15 @@
+[build]
+# The index HTML file to drive the bundling process.
+target = "index.html"
+# Build in release mode.
+release = false
+# The output dir for all final assets.
+dist = "dist"
+# Whether to include hash values in the output file names.
+filehash = true
+
+[watch]
+# Paths to watch. The `build.target`'s parent folder is watched by default.
+watch = ["./src", "./static", "./index.html"]
+# Paths to ignore.
+ignore = ["node_modules", "dist", ".git", "target"]

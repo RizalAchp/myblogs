@@ -24,7 +24,7 @@ impl Component for Landing {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let name = ctx.props().name.clone();
         html! {
-        <div id={self.id.clone()}>
+        <section id={self.id.clone()}>
           <div class="hero min-h-screen bg-base-200" style="background-image: url(/assets/img/bg-hero-white.jpg);">
             <div class="hero-content flex-col lg:flex-row">
               <div class="rounded-full border-8 shadow-xl">
@@ -47,7 +47,7 @@ impl Component for Landing {
               </div>
               </div>
             </div>
-        </div>
+        </section>
         }
     }
 }

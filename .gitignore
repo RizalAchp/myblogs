@@ -1,5 +1,5 @@
 /target
 /node_modules
-/tailwind.css
+*/**/tailwind.css
 /data
 /dist/.stage

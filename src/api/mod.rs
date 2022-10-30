@@ -1,76 +1,18 @@
-pub use gloo_net::http::{Request, Response};
-pub use serde::{Deserialize, Serialize};
-use serde_json;
-use std::collections::HashMap;
+mod profile;
+mod repo;
+mod request;
+
+pub use profile::ProfileGH;
+pub use repo::{LangCapability, RepoGH};
+pub use request::*;
+
+use gloo::console::{console, console_dbg};
+use serde::{Deserialize, Serialize};
 use yew::Properties;
-
-pub const KEY: &str = "rizalachp.data.self";
-pub const USERNAME_GITHUB: &str = env!("USERNAME_GITHUB");
-pub const API_URL_THIS: &str = "https://api.github.com/repos/{}/myblogs";
-
-#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
-pub struct ProfileGH {
-    pub login: String,
-    pub avatar_url: String,
-    pub name: String,
-    pub bio: String,
-    pub html_url: String,
-    pub public_repos: u32,
-    pub public_gist: u32,
-
-    #[serde(default)]
-    #[serde(flatten)]
-    __ignored_fields__: Option<HashMap<String, serde_json::Value>>,
-}
-
-impl ProfileGH {
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.name.is_empty() || self.avatar_url.is_empty()
-    }
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
-pub struct RepoGH {
-    pub name: String,
-    pub full_name: String,
-    pub html_url: String,
-    pub description: String,
-    pub fork: bool,
-    pub languages_url: String,
-    pub contents_url: String,
-    pub commits_url: String,
-    pub created_at: String,
-    pub updated_at: String,
-    pub pushed_at: String,
-    pub clone_url: String,
-    pub size: u32,
-
-    #[serde(default)]
-    #[serde(flatten)]
-    __ignored_fields__: Option<HashMap<String, serde_json::Value>>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize, Properties)]
-pub struct LangCapability {
-    pub name: String,
-    pub percentage: i32,
-}
-
-impl LangCapability {
-    #[inline]
-    pub fn percentage(&self) -> String {
-        format!("{}%", self.percentage)
-    }
-    #[inline]
-    pub fn style(&self) -> String {
-        format!("width:{};", self.percentage())
-    }
-}
 
 #[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
 pub struct ApiGithub {
-    profile: ProfileGH,
+    pub profile: ProfileGH,
     pub repository: Vec<RepoGH>,
     pub lang_percentage: Vec<LangCapability>,
 }
@@ -89,76 +31,77 @@ impl ApiGithub {
         self.repository = repository;
     }
     #[inline]
+    pub fn set_lang(&mut self, lang: Vec<LangCapability>) {
+        self.lang_percentage = lang;
+    }
+
+    #[inline]
     pub fn login(&self) -> String {
-        self.profile.login
+        self.profile.login.clone()
     }
     #[inline]
     pub fn avatar_url(&self) -> String {
-        self.profile.avatar_url
+        self.profile.avatar_url.clone()
     }
     #[inline]
     pub fn name(&self) -> String {
-        self.profile.name
+        self.profile.name.clone()
     }
     #[inline]
     pub fn bio(&self) -> String {
-        self.profile.bio
+        self.profile.bio.clone()
     }
     #[inline]
     pub fn html_url(&self) -> String {
-        self.profile.html_url
+        self.profile.html_url.clone()
     }
     #[inline]
     pub fn public_repos(&self) -> u32 {
-        self.profile.public_repos
+        self.profile.public_repos.clone()
     }
     #[inline]
     pub fn public_gist(&self) -> u32 {
-        self.profile.public_gist
+        self.profile.public_gist.clone()
     }
 }
+
 pub async fn get_languages(repository: Vec<String>) -> Vec<LangCapability> {
+    use std::collections::HashMap;
     let mut total: usize = 0;
     let mut all_repo_lang: HashMap<String, usize> = HashMap::new();
     for url in repository {
-        if let Some(response) = Request::get(&url).send().await.ok() {
-            if let Some(maps) = response.json::<HashMap<String, usize>>().await.ok() {
-                // insert key and value if not exist
-                // or sum the value with the existing value
-                maps.into_iter().for_each(|(k, v)| {
-                    all_repo_lang
-                        .entry(k)
-                        .and_modify(|vv| *vv += v)
-                        .or_insert(v);
+        match request_get_full::<HashMap<String, usize>>(url.clone()).await {
+            Err(e) => {
+                console!(format!("Error: {} on api request {}", e.to_string(), url));
+                continue;
+            }
+            Ok(response) => {
+                response.into_iter().for_each(|(k, v)| {
+                    *all_repo_lang.entry(k).or_insert(0) += v;
                     total += v;
                 });
-            };
+            }
         }
     }
+    console_dbg!(&all_repo_lang);
+    console_dbg!(&total);
     let mut unsorted = all_repo_lang
-        .into_iter()
+        .iter()
         .map(|(k, v)| LangCapability {
-            name: k,
-            percentage: ((v / total) * 100) as i32,
+            name: k.to_owned(),
+            percentage: ((v.clone() as f64 / total as f64) * 100f64) as usize,
         }) // map byte data to percentage
         .collect::<Vec<_>>();
     unsorted.sort_by(|a, b| b.percentage.cmp(&a.percentage));
+    console_dbg!(&unsorted);
     unsorted
 }
 
-pub async fn reqs_profile() -> Option<ProfileGH> {
-    let url = format!("https://api.github.com/users/{}", USERNAME_GITHUB);
-
-    match Request::get(&url).send().await {
-        Ok(resp) => resp.json::<ProfileGH>().await.ok(),
-        Err(e) => None,
-    }
-}
-pub async fn reqs_repos() -> Option<Vec<RepoGH>> {
-    let url = format!("https://api.github.com/users/{}/repos", USERNAME_GITHUB);
-
-    match Request::get(&url).send().await {
-        Ok(resp) => resp.json::<Vec<RepoGH>>().await.ok(),
-        Err(e) => None,
-    }
-}
+pub const ABOUT_LONG: &str = r"
+I am an optimistic, candid, responsible and social person.
+I am confident with my thinking analysis that I can convince people with my points.
+I am self-reliant, well behaved and above all, a person of strong character.
+I take initiative whenever the situation arises and come off with flying colours.
+I would like to develop all my existing qualities to the maximum level of perfection,
+as such I would like to go for positive experiences in my life because experience is the best teacher of a human being.
+";
