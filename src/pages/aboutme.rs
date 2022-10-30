@@ -1,11 +1,11 @@
 use crate::contents::AboutMe;
 use yew::prelude::*;
 
-pub struct PageAbout {
+pub struct PageAboutMe {
     aboutme: AboutMe,
 }
 
-impl Component for PageAbout{
+impl Component for PageAboutMe {
     type Message = ();
     type Properties = ();
 
@@ -37,7 +37,7 @@ impl Component for PageAbout{
                         </div>
                         <div class="tile is-parent">
                             <figure class="tile is-child image is-square">
-                                <img src={aboutme.image_url.clone()}  alt="The author's profile picture." />
+                                <img alt="The author's profile picture." src={aboutme.image_url.clone()} />
                             </figure>
                         </div>
                         <div class="tile is-parent">

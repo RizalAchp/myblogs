@@ -8,6 +8,12 @@ license = "MIT"
 
 [dependencies]
 yew = "0.19"
+anyhow = "1.0.66"
+serde = { version = "1.0.147", features = ["derive"] }
+gloo-storage = "0.2.2"
+gloo-net = "0.2.4"
+serde_json = "1.0.87"
+gloo = "0.8.0"
 
 [dependencies.web-sys]
 version = "0.3"

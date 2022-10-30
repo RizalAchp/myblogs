@@ -17,22 +17,27 @@ pub fn translate(md: Vec<Markdown>) -> yew::Html {
     }
 }
 
+#[inline]
 pub fn translate_boldtext(boldtext: String) -> yew::Html {
     html! {<b>{boldtext.clone()}</b>}
 }
 
+#[inline]
 pub fn translate_italic(italic: String) -> yew::Html {
     html! {<i>{italic.clone()}</i>}
 }
 
+#[inline]
 pub fn translate_inline_code(codestr: String) -> yew::Html {
     html! {<code>{codestr.clone()}</code>}
 }
 
+#[inline]
 pub fn translate_link(text: String, url: String) -> yew::Html {
     html! {<a href={url.clone()}>{text.clone()}</a>}
 }
 
+#[inline]
 pub fn translate_image(text: String, url: String) -> yew::Html {
     html! {<img src={url.clone()} alt={text.clone()} />}
 }

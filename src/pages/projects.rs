@@ -1,6 +1,5 @@
 use crate::components::comp_content::ContentsCard;
 use crate::contents::ContentLists;
-use crate::contents::CONTENT;
 use yew::prelude::*;
 
 pub struct PageProjects {

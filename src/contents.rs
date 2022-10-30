@@ -4,94 +4,17 @@ use crate::markdown_parser::{html, markdown_parse, Html, Markdown, MarkdownInlin
 use crate::translate::*;
 // use crate::translate::*;
 
-pub const ABOUTME: &str = include_str!("../data/aboutme.txt");
+pub const ABOUT_LONG: &str = r"
+I am an optimistic, candid, responsible and social person.
+I am confident with my thinking analysis that I can convince people with my points.
+I am self-reliant, well behaved and above all, a person of strong character.
+I take initiative whenever the situation arises and come off with flying colours.
+I would like to develop all my existing qualities to the maximum level of perfection,
+as such I would like to go for positive experiences in my life because experience is the best teacher of a human being.
+";
 pub const CONTENT: &str = include_str!("../data/contents.md");
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct LangCapability {
-    pub name: String,
-    pub percentage: i8,
-}
-impl LangCapability {
-    pub fn percentage(&self) -> String {
-        format!("{}%", self.percentage)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Default)]
-pub struct AboutMe {
-    pub name: String,
-    pub age: i32,
-    pub work: String,
-    pub education: String,
-    pub hobby: Vec<String>,
-    pub hastags: Vec<String>,
-    pub image_url: String,
-    pub lang: Vec<LangCapability>,
-    pub abouts: String,
-}
-
-impl AboutMe {
-    pub fn new() -> Self {
-        let items = ABOUTME
-            .split('\n')
-            .filter_map(|v| {
-                if v.contains('=') {
-                    v.split('=').collect::<Vec<_>>().last().cloned()
-                } else {
-                    Some(v.clone())
-                }
-            })
-            .collect::<Vec<_>>();
-
-        if items.len() <= 8 {
-            Default::default()
-        } else {
-            Self {
-                name: items[0].to_string(),
-                age: match items[1].parse::<i32>() {
-                    Ok(n) => n,
-                    Err(_) => 0,
-                },
-                work: items[2].to_string(),
-                education: items[3].to_string(),
-                hobby: items[4]
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>(),
-                hastags: items[5]
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>(),
-                image_url: items[6].to_string(),
-                lang: items[7]
-                    .trim()
-                    .trim_matches(|x| x == '[' || x == ']')
-                    .split(',')
-                    .map(|lc| {
-                        let lcsplit: Vec<String> = lc.split(':').map(|x| x.to_owned()).collect();
-                        if let (Some(name), Some(percentage)) = (lcsplit.first(), lcsplit.last()) {
-                            LangCapability {
-                                name: name.to_owned(),
-                                percentage: percentage.parse().ok().unwrap_or_default(),
-                            }
-                        } else {
-                            {
-                                LangCapability {
-                                    name: "Unknown".to_owned(),
-                                    percentage: 69,
-                                }
-                            }
-                        }
-                    })
-                    .collect(),
-                abouts: items[8..].join(" "),
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, yew::Properties)]
 pub struct ContentItem {
     pub name: Option<Html>,
     pub isi: Option<Html>,

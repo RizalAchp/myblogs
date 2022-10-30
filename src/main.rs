@@ -1,31 +1,69 @@
 #![allow(dead_code)]
+mod api;
 mod components;
 mod contents;
 mod markdown_parser;
 mod pages;
 
 use crate::markdown_parser::*;
+use api::{
+    get_languages, reqs_profile, reqs_repos, ApiGithub, LangCapability, ProfileGH, RepoGH, KEY,
+};
 use components::about::About;
 use components::landing::Landing;
-use contents::{AboutMe, LangCapability};
+use gloo_storage::{LocalStorage, Storage};
+use pages::{PageAboutMe, PageNotFound, PageProjects};
 use yew::{html, Component, Context, Html};
+
+pub enum PageRoute {
+    Landing,
+    AboutMe,
+    Projects,
+    NotFound,
+}
 
 pub enum Msg {
     ToggleNavbar,
+    SaveToStorage,
+    FetchProfile(ProfileGH),
+    FetchRepo(Vec<RepoGH>),
+    FetchCount(Vec<LangCapability>),
 }
 
 pub struct App {
+    main_route: PageRoute,
     navbar_active: bool,
-    aboutme: AboutMe,
+    api_data: ApiGithub,
 }
 
 impl Component for App {
     type Message = Msg;
     type Properties = ();
-    fn create(_ctx: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
+        let api_data = match LocalStorage::get::<ApiGithub>(KEY) {
+            Ok(data) => data,
+            Err(_) => {
+                ctx.link().send_future(async {
+                    Msg::FetchProfile(reqs_profile().await.unwrap_or_default())
+                });
+                ctx.link().send_future_batch(async {
+                    let repos = reqs_repos().await.unwrap_or_default();
+                    let percent = get_languages(
+                        repos
+                            .into_iter()
+                            .map(|RepoGH { languages_url, .. }| languages_url)
+                            .collect(),
+                    )
+                    .await;
+                    vec![Msg::FetchRepo(repos), Msg::FetchCount(percent)]
+                });
+                Default::default()
+            }
+        };
         Self {
-            navbar_active: true,
-            aboutme: AboutMe::new(),
+            main_route: PageRoute::Landing,
+            navbar_active: false,
+            api_data,
         }
     }
 
@@ -35,48 +73,72 @@ impl Component for App {
                 self.navbar_active = !self.navbar_active;
                 true
             }
+            Msg::SaveToStorage => {
+                LocalStorage::set(KEY, self.api_data).ok();
+                true
+            }
+            Msg::FetchProfile(item) => {
+                self.api_data.set_profile(item);
+                true
+            }
+            Msg::FetchRepo(item) => {
+                self.api_data.set_repository(item);
+                true
+            }
+            Msg::FetchCount(item) => {
+                self.api_data.lang_percentage = item;
+                true
+            }
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let Self { aboutme, .. } = self;
-
         html! {
         <>
             { self.view_nav(ctx.link()) }
-            <div id="main" class="relative">
-                <Landing id="landing" name={aboutme.name.to_owned()}/>
-                <About
-                    id="about"
-                    name={aboutme.name.to_owned()}
-                    short_desc={aboutme.education.to_owned()}
-                    desc={aboutme.abouts.to_owned()}
-                    lang={Some(aboutme.lang.to_owned())}
-                />
-            </div>
-            {self.view_footer()}
+            <main id="main" class="relative">
+                { self.route_main(ctx) }
+            </main>
+            { self.view_footer(ctx.link()) }
         </>
         }
     }
 }
 
 impl App {
+    fn route_main(&self, _ctx: &Context<Self>) -> Html {
+        match self.main_route {
+            PageRoute::Landing => yew::html!(
+                <>
+                    <Landing id="landing" name={self.api_data.name()}/>
+                    <About id="about"
+                        name={self.api_data.name()}
+                        short_desc={self.api_data.bio()}
+                        lang={self.api_data.lang_percentage}
+                    />
+                </>
+            ),
+            PageRoute::AboutMe => yew::html!(<PageAboutMe />),
+            PageRoute::Projects => yew::html!(<PageProjects />),
+            PageRoute::NotFound => yew::html!(<PageNotFound />),
+        }
+    }
     fn view_nav(&self, link: &Scope<Self>) -> Html {
         let click_callback = link.callback(|_| Msg::ToggleNavbar);
-        html! {
+        html! (
         <div class="sticky top-0 z-30 flex h-16 w-full justify-center">
             <div class="drawer">
-            <input id="my-drawer-3" type="checkbox" checked={self.navbar_active} class="drawer-toggle" />
+            <input id="my-drawer-3" type="checkbox" class="drawer-toggle" checked={self.navbar_active} />
             <div class="drawer-content flex flex-col">
               <div class="w-full navbar bg-opacity-90 backdrop-blur transition-all duration-100 bg-base-200 text-base-content shadow-sm">
                 <div class="flex-none lg:hidden">
                   <label for="my-drawer-3" class="btn btn-square btn-ghost">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-6 h-6 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-6 h-6 stroke-current">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" > </path>
+                    </svg>
                   </label>
                 </div>
-                <div class="flex-1 px-2 mx-2">
-                    <a href="#landing"> {"RizalAchp"}</a>
-                </div>
+                <div class="flex-1 px-2 mx-2"> <a href="#landing"> {"RizalAchp"}</a> </div>
                 <div class="flex-none hidden lg:block">
                   <ul class="menu menu-horizontal">
                     <li ><a href="#about">{"About"}</a> </li>
@@ -88,25 +150,23 @@ impl App {
               </div>
             </div>
             <div class="drawer-side">
-              <label for="my-drawer-3" class="drawer-overlay">
-              </label>
-
+              <label for="my-drawer-3" class="drawer-overlay"> </label>
               <ul class="menu p-4 overflow-y-auto w-80 bg-base-100 backdrop-blur transition-all bg-opacity-90">
-                   <li  ><a onclick={&click_callback} href="#about">{"About"}</a> </li>
-                    <li ><a onclick={&click_callback} href="#achievement">{"Achievment"}</a></li>
-                    <li ><a onclick={&click_callback} href="#blog">{"Blog"}</a></li>
-                    <li ><a onclick={click_callback} href="#contact">{"Contact"}</a></li>
+                 <li  ><a onclick={&click_callback} href="#about">{"About"}</a> </li>
+                 <li ><a onclick={&click_callback} href="#achievement">{"Achievment"}</a></li>
+                 <li ><a onclick={&click_callback} href="#blog">{"Blog"}</a></li>
+                 <li ><a onclick={click_callback} href="#contact">{"Contact"}</a></li>
               </ul>
             </div>
           </div>
         </div>
-        }
+        )
     }
 
     #[inline]
-    fn view_footer(&self) -> Html {
+    fn view_footer(&self, _link: &Scope<Self>) -> Html {
         html! {
-            <footer class="footer p-10 bg-base-300 bg-">
+            <footer class="footer p-10 bg-base-300 footer">
                 <div>
                     <svg width="50" height="50" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" class="fill-current"><path d="M22.672 15.226l-2.432.811.841 2.515c.33 1.019-.209 2.127-1.23 2.456-1.15.325-2.148-.321-2.463-1.226l-.84-2.518-5.013 1.677.84 2.517c.391 1.203-.434 2.542-1.831 2.542-.88 0-1.601-.564-1.86-1.314l-.842-2.516-2.431.809c-1.135.328-2.145-.317-2.463-1.229-.329-1.018.211-2.127 1.231-2.456l2.432-.809-1.621-4.823-2.432.808c-1.355.384-2.558-.59-2.558-1.839 0-.817.509-1.582 1.327-1.846l2.433-.809-.842-2.515c-.33-1.02.211-2.129 1.232-2.458 1.02-.329 2.13.209 2.461 1.229l.842 2.515 5.011-1.677-.839-2.517c-.403-1.238.484-2.553 1.843-2.553.819 0 1.585.509 1.85 1.326l.841 2.517 2.431-.81c1.02-.33 2.131.211 2.461 1.229.332 1.018-.21 2.126-1.23 2.456l-2.433.809 1.622 4.823 2.433-.809c1.242-.401 2.557.484 2.557 1.838 0 .819-.51 1.583-1.328 1.847m-8.992-6.428l-5.01 1.675 1.619 4.828 5.011-1.674-1.62-4.829z"></path></svg>
                     <p>{"ACME Industries Ltd."}<br/>{"Providing reliable tech since 1992}"}</p>

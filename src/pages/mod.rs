@@ -1,9 +1,8 @@
-pub mod aboutpage;
-pub mod aboutdeeper;
-pub mod projects;
+pub mod aboutme;
 pub mod notfound;
+pub mod projects;
 
-pub use aboutdeeper::PageAboutDeeper;
-pub use aboutpage::PageAbout;
+pub use aboutme::PageAboutMe;
 pub use notfound::PageNotFound;
 pub use projects::PageProjects;
+

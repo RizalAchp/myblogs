@@ -32,7 +32,7 @@ impl Component for Landing {
               </div>
 
               <div class="pt-8 sm:pt-10 lg:pl-8 lg:pt-0">
-                <h1 class="text-center font-header text-4xl sm:text-left sm:text-5xl md:text-6xl">
+                <h1 class="text-center font-header text-4xl md:text-left sm:text-5xl md:text-6xl">
                   {format!("Hello I'm {name}!")}
                 </h1>
                 <div class="flex flex-col justify-center pt-3 sm:flex-row sm:pt-5 lg:justify-start">
