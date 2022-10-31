@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unsafe_code)]
 mod api;
 mod components;
 mod contents;
@@ -6,13 +7,10 @@ mod markdown_parser;
 mod pages;
 
 use crate::markdown_parser::*;
-use api::{
-    get_languages, request_get, request_get_full, ApiGithub, LangCapability, ProfileGH, RepoGH,
-};
+use api::{get_languages, request_get, ApiGithub, LangCapability, ProfileGH, RepoGH};
 use components::landing::Landing;
 use components::{about::About, lang::Lang};
-use gloo::console::*;
-use gloo::storage::{SessionStorage, Storage};
+use gloo::storage::{LocalStorage, Storage};
 use pages::{PageAboutMe, PageNotFound, PageProjects};
 
 pub enum PageRoute {
@@ -29,6 +27,7 @@ pub enum Msg {
 }
 
 pub struct App {
+    profile: ProfileGH,
     main_route: PageRoute,
     navbar_active: bool,
     api_data: ApiGithub,
@@ -38,59 +37,49 @@ impl Component for App {
     type Message = Msg;
     type Properties = ();
     fn create(ctx: &Context<Self>) -> Self {
-        let api_data = SessionStorage::get::<ApiGithub>(api::KEY).unwrap_or_default();
-        if api_data.is_empty() {
+        let profile = LocalStorage::get::<ProfileGH>(api::KEY_PROFILE).unwrap_or_default();
+        let api_data = LocalStorage::get::<ApiGithub>(api::KEY).unwrap_or_default();
+        if profile.is_empty() {
             ctx.link().send_future(async {
                 Msg::FetchOnProfile(
                     match request_get::<ProfileGH>("users/RizalAchp".to_owned()).await {
                         Ok(d) => d,
-                        Err(er) => {
-                            console_dbg!(format!(
-                                "Error: {} on request_get profile",
-                                er.to_string()
-                            ));
-                            Default::default()
-                        }
+                        Err(_) => Default::default(),
                     },
                 )
             });
+        }
+        if api_data.is_empty() {
             ctx.link().send_future(async {
-                let repository =
-                    match request_get::<Vec<RepoGH>>("users/RizalAchp/repos".to_owned()).await {
-                        Ok(d) => d,
-                        Err(er) => {
-                            console_dbg!(format!("Error: {} on request_get repo", er.to_string()));
-                            Default::default()
-                        }
-                    };
-                let lang_percentage = get_languages(
-                    repository
-                        .clone()
-                        .into_iter()
-                        .filter_map(
-                            |RepoGH {
-                                 languages_url,
-                                 fork,
-                                 ..
-                             }| {
-                                if !fork {
-                                    Some(languages_url)
-                                } else {
-                                    None
-                                }
-                            },
-                        )
-                        .collect(),
-                )
-                .await;
+                let repository = request_get::<Vec<RepoGH>>("users/RizalAchp/repos".to_owned())
+                    .await
+                    .unwrap_or_default();
+                let lang_filtered = repository
+                    .clone()
+                    .into_iter()
+                    .filter_map(
+                        |RepoGH {
+                             languages_url,
+                             fork,
+                             ..
+                         }| {
+                            if !fork {
+                                Some(languages_url)
+                            } else {
+                                None
+                            }
+                        },
+                    )
+                    .collect();
+                let lang_percentage = get_languages(lang_filtered).await;
                 Msg::FetchDone(ApiGithub {
                     repository,
                     lang_percentage,
-                    ..Default::default()
                 })
             });
         }
         Self {
+            profile,
             main_route: PageRoute::Landing,
             navbar_active: false,
             api_data,
@@ -105,18 +94,18 @@ impl Component for App {
             }
             Msg::FetchDone(data) => {
                 self.api_data = data;
-                SessionStorage::set(api::KEY, self.api_data.clone()).ok();
+                LocalStorage::set(api::KEY, &self.api_data.clone()).ok();
                 true
             }
             Msg::FetchOnProfile(data) => {
-                self.api_data.profile = data;
-                SessionStorage::set(api::KEY, self.api_data.clone()).ok();
+                self.profile = data;
+                LocalStorage::set(api::KEY_PROFILE, &self.profile.clone()).ok();
                 true
             }
         }
     }
     fn destroy(&mut self, _ctx: &Context<Self>) {
-        SessionStorage::set(api::KEY, &self.api_data.clone()).ok();
+        LocalStorage::set(api::KEY, &self.api_data.clone()).ok();
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
@@ -137,9 +126,9 @@ impl App {
         match self.main_route {
             PageRoute::Landing => yew::html!(
                 <>
-                    <Landing id="landing" name={self.api_data.name()}/>
-                    <About id="about" name={self.api_data.name()} short_desc={self.api_data.bio()} >
-                    <>{ if !self.api_data.is_empty() {
+                    <Landing id="landing" name={self.profile.name.clone()}/>
+                    <About id="about" name={self.profile.name.clone()} short_desc={self.profile.bio.clone()} >
+                    <>{ if !self.api_data.lang_percentage.len() > 6 {
                         html!(for self.api_data
                             .lang_percentage[..5]
                             .iter()

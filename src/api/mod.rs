@@ -6,27 +6,20 @@ pub use profile::ProfileGH;
 pub use repo::{LangCapability, RepoGH};
 pub use request::*;
 
-use gloo::console::{console, console_dbg};
 use serde::{Deserialize, Serialize};
 use yew::Properties;
 
 #[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
 pub struct ApiGithub {
-    pub profile: ProfileGH,
     pub repository: Vec<RepoGH>,
     pub lang_percentage: Vec<LangCapability>,
 }
 
 impl ApiGithub {
     pub fn is_empty(&self) -> bool {
-        self.profile.is_empty() || self.repository.is_empty()
+        self.lang_percentage.is_empty() || self.repository.is_empty()
     }
 
-    #[inline]
-    pub fn set_profile(&mut self, profile: ProfileGH) {
-        self.profile = profile;
-    }
-    #[inline]
     pub fn set_repository(&mut self, repository: Vec<RepoGH>) {
         self.repository = repository;
     }
@@ -35,34 +28,6 @@ impl ApiGithub {
         self.lang_percentage = lang;
     }
 
-    #[inline]
-    pub fn login(&self) -> String {
-        self.profile.login.clone()
-    }
-    #[inline]
-    pub fn avatar_url(&self) -> String {
-        self.profile.avatar_url.clone()
-    }
-    #[inline]
-    pub fn name(&self) -> String {
-        self.profile.name.clone()
-    }
-    #[inline]
-    pub fn bio(&self) -> String {
-        self.profile.bio.clone()
-    }
-    #[inline]
-    pub fn html_url(&self) -> String {
-        self.profile.html_url.clone()
-    }
-    #[inline]
-    pub fn public_repos(&self) -> u32 {
-        self.profile.public_repos.clone()
-    }
-    #[inline]
-    pub fn public_gist(&self) -> u32 {
-        self.profile.public_gist.clone()
-    }
 }
 
 pub async fn get_languages(repository: Vec<String>) -> Vec<LangCapability> {
@@ -71,8 +36,7 @@ pub async fn get_languages(repository: Vec<String>) -> Vec<LangCapability> {
     let mut all_repo_lang: HashMap<String, usize> = HashMap::new();
     for url in repository {
         match request_get_full::<HashMap<String, usize>>(url.clone()).await {
-            Err(e) => {
-                console!(format!("Error: {} on api request {}", e.to_string(), url));
+            Err(_) => {
                 continue;
             }
             Ok(response) => {
@@ -83,8 +47,6 @@ pub async fn get_languages(repository: Vec<String>) -> Vec<LangCapability> {
             }
         }
     }
-    console_dbg!(&all_repo_lang);
-    console_dbg!(&total);
     let mut unsorted = all_repo_lang
         .iter()
         .map(|(k, v)| LangCapability {
@@ -93,7 +55,6 @@ pub async fn get_languages(repository: Vec<String>) -> Vec<LangCapability> {
         }) // map byte data to percentage
         .collect::<Vec<_>>();
     unsorted.sort_by(|a, b| b.percentage.cmp(&a.percentage));
-    console_dbg!(&unsorted);
     unsorted
 }
 

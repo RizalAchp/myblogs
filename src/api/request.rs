@@ -3,6 +3,7 @@ use reqwest;
 use serde::{de::DeserializeOwned, Serialize};
 
 pub const KEY: &str = "rizalachp.data.self";
+pub const KEY_PROFILE: &str = "rizalachp.data.profile";
 pub const API_ROOT: &str = "https://api.github.com/";
 pub const USERNAME_GITHUB: &str = "users/RizalAchp";
 pub const API_URL_THIS: &str = "https://api.github.com/repos/{}/myblogs";
