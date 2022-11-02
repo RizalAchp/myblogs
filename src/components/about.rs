@@ -1,4 +1,3 @@
-use crate::api::ABOUT_LONG;
 use crate::components::media_social::MediaSocials;
 use yew::prelude::*;
 
@@ -11,11 +10,11 @@ pub struct PropsAbout {
     pub children: Children,
 }
 
-pub struct About {
+pub struct AboutComp {
     pub id: String,
 }
 
-impl Component for About {
+impl Component for AboutComp {
     type Message = ();
     type Properties = PropsAbout;
     fn create(ctx: &Context<Self>) -> Self {
@@ -27,18 +26,17 @@ impl Component for About {
         let prop = ctx.props();
         html! {
           <div id={self.id.to_owned()} class="bg-primary-300">
-            <div class="flex flex-col w-full lg:flex-row py-16 md:py-20 ">
+            <div class="flex flex-col w-full lg:flex-row py-16 md:py-20">
               <div class="grid flex-grow card rounded-box place-items-center text-left sm:w-3/4 lg:w-3/5 lg:ml-10 mx-10">
-                    <h2 class="font-header text-4xl font-semibold uppercase text-primary sm:text-5xl lg:text-6xl">
+                    <h2 class="font-header text-4xl font-semibold uppercase sm:text-5xl lg:text-6xl">
                         {"Who am I?"}
                     </h2>
-                    <h4 class="pt-6 font-header text-xl font-medium text-black sm:text-2xl lg:text-3xl">
+                    <h4 class="pt-6 font-header text-xl font-medium sm:text-2xl lg:text-3xl">
                         {format!("I'm {}, {}", prop.name.to_owned(), prop.short_desc.to_owned())}
                     </h4>
-                    <p class="pt-6 font-body leading-relaxed text-grey-20"> {ABOUT_LONG} </p>
                     <div class="flex flex-col justify-center pt-6 sm:flex-row lg:justify-start">
                         <div class="flex items-center justify-center sm:justify-start">
-                            <p class="font-body text-lg font-semibold uppercase text-grey-20"> {"Connect with me"} </p>
+                            <p class="font-body text-lg font-semibold uppercase text-primary"> {"Connect with me"} </p>
                                 <div class="hidden sm:block">
                                     <i class="bx bx-chevron-right text-2xl text-primary"></i>
                                 </div>

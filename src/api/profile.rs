@@ -1,7 +1,7 @@
 use super::{Deserialize, Properties, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize, Properties)]
+#[derive(Debug, Default, Clone, PartialEq,Eq, Deserialize, Serialize, Properties)]
 pub struct ProfileGH {
     #[serde(default)]
     pub login: String,

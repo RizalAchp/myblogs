@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use reqwest;
 use serde::{de::DeserializeOwned, Serialize};
 
-pub const KEY: &str = "rizalachp.data.self";
+pub const KEY_REPO: &str = "rizalachp.data.repo";
 pub const KEY_PROFILE: &str = "rizalachp.data.profile";
 pub const API_ROOT: &str = "https://api.github.com/";
 pub const USERNAME_GITHUB: &str = "users/RizalAchp";

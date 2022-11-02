@@ -1,15 +1,20 @@
 [build]
-# The index HTML file to drive the bundling process.
 target = "index.html"
-# Build in release mode.
 release = false
-# The output dir for all final assets.
 dist = "dist"
-# Whether to include hash values in the output file names.
-filehash = true
+filehash = false
+
+[serve]
+address = "127.0.0.1"
+port = 8080
+open = false
+no_autoreload = false
 
 [watch]
-# Paths to watch. The `build.target`'s parent folder is watched by default.
-watch = ["./src", "./static", "./index.html"]
-# Paths to ignore.
-ignore = ["node_modules", "dist", ".git", "target"]
+watch = ["./src", "./static/tailwind.css", "./index.html"]
+ignore = ["node_modules", ".git", "target"]
+
+[[hooks]]
+stage = "pre_build"
+command = "npm"
+command_arguments = ["run", "build"]

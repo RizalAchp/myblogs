@@ -1,7 +1,7 @@
 use super::{Deserialize, Properties, Serialize};
 
 use std::collections::HashMap;
-#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize, Properties)]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize, Properties, Eq)]
 pub struct RepoGH {
     #[serde(default)]
     pub name: String,
@@ -35,7 +35,7 @@ pub struct RepoGH {
     __ignored_fields__: Option<HashMap<String, serde_json::Value>>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize, Properties)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize, Properties, Eq)]
 pub struct LangCapability {
     pub name: String,
     pub percentage: usize,

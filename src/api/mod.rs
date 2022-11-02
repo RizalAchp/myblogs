@@ -9,7 +9,7 @@ pub use request::*;
 use serde::{Deserialize, Serialize};
 use yew::Properties;
 
-#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize, Eq)]
 pub struct ApiGithub {
     pub repository: Vec<RepoGH>,
     pub lang_percentage: Vec<LangCapability>,
