@@ -1,7 +1,10 @@
+mod content;
 mod profile;
 mod repo;
 mod request;
+mod commits;
 
+pub use content::ApiContent;
 pub use profile::ProfileGH;
 pub use repo::{LangCapability, RepoGH};
 pub use request::*;
@@ -13,6 +16,7 @@ use yew::Properties;
 pub struct ApiGithub {
     pub repository: Vec<RepoGH>,
     pub lang_percentage: Vec<LangCapability>,
+    pub contents: Vec<ApiContent>
 }
 
 impl ApiGithub {
@@ -27,7 +31,26 @@ impl ApiGithub {
     pub fn set_lang(&mut self, lang: Vec<LangCapability>) {
         self.lang_percentage = lang;
     }
+}
+pub async fn get_contents(content_url: Vec<String>) -> Vec<ApiContent> {
+    let mut all_contents: Vec<ApiContent> = vec![];
+    all_contents.reserve(content_url.len());
+    for url in content_url.into_iter() {
+        match request_get_full::<ApiContent>(url).await {
+            Err(_) => continue,
+            Ok(resp) => all_contents.push(resp),
+        }
+    }
+    all_contents
+}
 
+pub async fn get_and_filter_repo_by_size(repos: &mut Vec<RepoGH>, sz: Option<usize>) -> Vec<RepoGH> {
+    repos.sort_by(|a, b| b.size.cmp(&a.size));
+    if let Some(s) = sz {
+        repos[..s].to_owned()
+    } else {
+        repos.to_owned()
+    }
 }
 
 pub async fn get_languages(repository: Vec<String>) -> Vec<LangCapability> {

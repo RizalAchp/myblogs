@@ -30,6 +30,7 @@ pub struct RepoGH {
     #[serde(default)]
     pub size: u32,
 
+
     #[serde(default)]
     #[serde(flatten)]
     __ignored_fields__: Option<HashMap<String, serde_json::Value>>,
@@ -50,4 +51,10 @@ impl LangCapability {
     pub fn style(&self) -> String {
         format!("width:{};", self.percentage())
     }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize, Properties, Eq)]
+pub struct RepoDetails {
+    repo: RepoGH,
+
 }

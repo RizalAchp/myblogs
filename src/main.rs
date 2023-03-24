@@ -12,6 +12,8 @@ use gloo_storage::{LocalStorage, Storage};
 use pages::{LandingPage, PageAboutMe, PageNotFound, PageProjects};
 use yew::{html::Scope, prelude::*};
 
+use self::api::{get_contents, ApiContent};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PageRoute {
     Landing,
@@ -31,11 +33,13 @@ pub enum Themes {
 pub enum Msg {
     OnToggleTheme,
     OnRouting(PageRoute),
-    OnFetchDone(ApiGithub),
-    OnFetchOnProfile(ProfileGH),
+    OnFetchRepo(Vec<RepoGH>),
+    OnFetchLang(Vec<LangCapability>),
+    OnFetchContent(Vec<ApiContent>),
+    OnFetchProfile(ProfileGH),
 }
 
-#[derive(Debug, Clone,PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct App {
     profile: ProfileGH,
     main_route: PageRoute,
@@ -60,14 +64,17 @@ impl Component for App {
         }
     }
 
-    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::OnFetchDone(data) => {
-                self.api_data = data;
-                LocalStorage::set(api::KEY_REPO, &self.api_data.clone()).ok();
+            Msg::OnToggleTheme => {
+                if self.theme == Themes::Light("lofi".to_owned()) {
+                    self.theme = Themes::Dark("black".to_owned())
+                } else {
+                    self.theme = Themes::Light("lofi".to_owned())
+                }
                 true
             }
-            Msg::OnFetchOnProfile(data) => {
+            Msg::OnFetchProfile(data) => {
                 self.profile = data;
                 LocalStorage::set(api::KEY_PROFILE, &self.profile.clone()).ok();
                 true
@@ -76,12 +83,18 @@ impl Component for App {
                 self.main_route = route;
                 true
             }
-            Msg::OnToggleTheme => {
-                if self.theme == Themes::Light("lofi".to_owned()) {
-                    self.theme = Themes::Dark("black".to_owned())
-                } else {
-                    self.theme = Themes::Light("lofi".to_owned())
-                }
+            Msg::OnFetchRepo(repo) => {
+                self.api_data.repository = repo;
+                self.api_data.repository.sort_by(|a, b| b.size.cmp(&a.size));
+                self.request_lang_and_commit(ctx.link(), &self.api_data.repository);
+                true
+            }
+            Msg::OnFetchLang(lang) => {
+                self.api_data.lang_percentage = lang;
+                true
+            }
+            Msg::OnFetchContent(contents) => {
+                self.api_data.contents = contents;
                 true
             }
         }
@@ -121,7 +134,7 @@ impl Component for App {
 impl App {
     fn request_profile(link: &Scope<Self>) -> ProfileGH {
         link.send_future(async {
-            Msg::OnFetchOnProfile(
+            Msg::OnFetchProfile(
                 match request_get::<ProfileGH>("users/RizalAchp".to_owned()).await {
                     Ok(d) => d,
                     Err(_) => Default::default(),
@@ -132,33 +145,41 @@ impl App {
     }
     fn request_repo(link: &Scope<Self>) -> ApiGithub {
         link.send_future(async {
-            let repository = request_get::<Vec<RepoGH>>("users/RizalAchp/repos".to_owned())
-                .await
-                .unwrap_or_default();
-            let lang_filtered = repository
-                .clone()
-                .into_iter()
-                .filter_map(
-                    |RepoGH {
-                         languages_url,
-                         fork,
-                         ..
-                     }| {
-                        if !fork {
-                            Some(languages_url)
-                        } else {
-                            None
-                        }
-                    },
-                )
-                .collect();
-            let lang_percentage = get_languages(lang_filtered).await;
-            Msg::OnFetchDone(ApiGithub {
-                repository,
-                lang_percentage,
-            })
+            let repository: Vec<RepoGH> =
+                request_get::<Vec<RepoGH>>("users/RizalAchp/repos".to_owned())
+                    .await
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(|repo| if !repo.fork { Some(repo) } else { None })
+                    .collect();
+            Msg::OnFetchRepo(repository)
         });
         ApiGithub::default()
+    }
+
+    fn request_lang_and_commit(&self, link: &Scope<Self>, repositories: &Vec<RepoGH>) {
+        let urls_lang: Vec<String> = repositories
+            .iter()
+            .map(|RepoGH { languages_url, .. }| languages_url.to_owned())
+            .collect();
+        let urls_contents: Vec<String> = repositories
+            .iter()
+            .map(|RepoGH { commits_url, .. }| {
+                let mut url = commits_url.clone();
+                url.push_str("/README.md");
+                url
+            })
+            .collect();
+
+        link.send_future(async move {
+            let lang_percentage: Vec<LangCapability> = get_languages(urls_lang).await;
+            Msg::OnFetchLang(lang_percentage)
+        });
+
+        link.send_future(async move {
+            let contents_filtered: Vec<ApiContent> = get_contents(urls_contents).await;
+            Msg::OnFetchContent(contents_filtered)
+        });
     }
 }
 

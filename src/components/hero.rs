@@ -29,7 +29,7 @@ impl Component for HeroComp {
         let profile_img = ctx.props().profile_img.clone();
         html! {
             <section id={self.id.clone()}>
-                <div class="hero min-h-screen bg-base-200" style={format!("background-image: url({});", hero_img)}>
+                <div class="hero min-h-screen bg-base-200" style={format!("background-image: url({hero_img});")}>
                     <div class="hero-content flex-col lg:flex-row">
                         <div class="avatar">
                             <div class="md:w-48 w-36 rounded-full">
@@ -37,7 +37,7 @@ impl Component for HeroComp {
                             </div>
                         </div>
                             <div class="pt-8 sm:pt-10 lg:pl-8 lg:pt-0">
-                                <h1 class="text-center font-header text-4xl md:text-left md:text-6xl">
+                                <h1 class="text-center font-header uppercase font-bold text-5xl md:text-left md:text-6xl">
                                     {"Hello!"}
                                 </h1>
                                 <h1 class="text-center font-header text-2xl md:text-left md:text-4xl">

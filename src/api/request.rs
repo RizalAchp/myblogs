@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use reqwest;
+use reqwest::{self, Method};
 use serde::{de::DeserializeOwned, Serialize};
 
 pub const KEY_REPO: &str = "rizalachp.data.repo";
@@ -13,39 +13,38 @@ where
     T: DeserializeOwned + 'static + std::fmt::Debug,
     B: Serialize + std::fmt::Debug,
 {
-    let allow_body = method == reqwest::Method::POST || method == reqwest::Method::PUT;
+    let allow_body = (method == Method::POST) || (method == Method::PUT);
     let mut builder = reqwest::Client::new()
-        .request(method, url)
+        .request(method.to_owned(), &url)
         .header("Content-Type", "application/json");
 
     if allow_body {
         builder = builder.json(&body);
     }
+    let response = builder
+        .send()
+        .await
+        .map_err(|_| anyhow!("Request error on {url}"))?;
 
-    let response = builder.send().await;
-
-    if let Ok(data) = response {
-        if data.status().is_success() {
-            data.json::<T>().await.map_err(|e| anyhow!(e))
-        } else {
-            match data.status().as_u16() {
-                401 => Err(anyhow!("UnAutorized")),
-                403 => Err(anyhow!("Forbidden")),
-                404 => Err(anyhow!("NotFound")),
-                500 => Err(anyhow!("InternalServerError")),
-                422 => {
-                    let data: std::result::Result<String, _> = data.json().await;
-                    if let Ok(data) = data {
-                        Err(anyhow!(data))
-                    } else {
-                        Err(anyhow!("Deserialize error"))
-                    }
-                }
-                _ => Err(anyhow!("Request Error")),
-            }
-        }
+    let status = response.status();
+    if status.is_success() {
+        response.json::<T>().await.map_err(|e| anyhow!(e))
     } else {
-        Err(anyhow!("Request Error"))
+        match status.as_u16() {
+            401 => Err(anyhow!("UnAutorized on Request {method} - {url}")),
+            403 => Err(anyhow!("Forbidden on Request {method} - {url}")),
+            404 => Err(anyhow!("NotFound on Request {method} - {url}")),
+            500 => Err(anyhow!("InternalServerError on Request {method} - {url}")),
+            422 => {
+                let data: std::result::Result<String, _> = response.json().await;
+                if let Ok(data) = data {
+                    Err(anyhow!(data))
+                } else {
+                    Err(anyhow!("Deserialize error on Request {method} - {url}"))
+                }
+            }
+            _ => Err(anyhow!("Request Error on Request {method} - {url}")),
+        }
     }
 }
 
@@ -55,7 +54,7 @@ where
     T: DeserializeOwned + 'static + std::fmt::Debug,
 {
     let url = format!("{}{}", API_ROOT, url);
-    request(reqwest::Method::DELETE, url, ()).await
+    request(Method::DELETE, url, ()).await
 }
 
 /// Get request
@@ -64,14 +63,14 @@ where
     T: DeserializeOwned + 'static + std::fmt::Debug,
 {
     let url = format!("{}{}", API_ROOT, url);
-    request(reqwest::Method::GET, url, ()).await
+    request(Method::GET, url, ()).await
 }
 
 pub async fn request_get_full<T>(url: String) -> Result<T>
 where
     T: DeserializeOwned + 'static + std::fmt::Debug,
 {
-    request(reqwest::Method::GET, url, ()).await
+    request(Method::GET, url, ()).await
 }
 
 /// Post request with a body
@@ -81,7 +80,7 @@ where
     B: Serialize + std::fmt::Debug,
 {
     let url = format!("{}{}", API_ROOT, url);
-    request(reqwest::Method::POST, url, body).await
+    request(Method::POST, url, body).await
 }
 
 /// Put request with a body
@@ -91,7 +90,7 @@ where
     B: Serialize + std::fmt::Debug,
 {
     let url = format!("{}{}", API_ROOT, url);
-    request(reqwest::Method::PUT, url, body).await
+    request(Method::PUT, url, body).await
 }
 
 /// Set limit for pagination

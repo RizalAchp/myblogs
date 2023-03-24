@@ -2,7 +2,7 @@ use yew::prelude::*;
 
 use crate::{
     api::{LangCapability, ProfileGH},
-    components::{AboutComp, LangComp, HeroComp},
+    components::{AboutComp, HeroComp, LangComp, ProjectCard},
     Themes,
 };
 
@@ -27,12 +27,18 @@ impl Component for LandingPage {
         let profile = props.profile;
         let theme = props.theme;
         let langlist = if let Some(lists) = &props.langlist {
-            lists.clone()
+            lists
+                .clone()
                 .iter()
                 .enumerate()
-                .map(|(idx, lang)| html!(<LangComp {idx} lang={lang.clone()}/>)).collect()
+                .map(|(idx, lang)| html!(<LangComp {idx} lang={lang.clone()}/>))
+                .collect()
         } else {
             html!()
+        };
+        let hero_img = match theme {
+            Themes::Light(_) => "/assets/img/bg-hero-white.jpg",
+            Themes::Dark(_) => "/assets/img/bg-hero-black.jpg",
         };
         html!(
             <section>
@@ -40,14 +46,22 @@ impl Component for LandingPage {
                     id="landing"
                     name={profile.name.clone()}
                     profile_img={profile.avatar_url.clone()}
-                    hero_img={match theme {
-                        Themes::Light(_) => "/assets/img/bg-hero-white.jpg",
-                        Themes::Dark(_) => "/assets/img/bg-hero-black.jpg"
-                    }}
+                    {hero_img}
                 />
                 <AboutComp id="about" name={profile.name.clone()} short_desc={profile.bio.clone()} >
+                    <h1 class="font-header md:text-xl text-md font-bold uppercase">{"Programming Language I Use Often"}</h1>
                     {langlist}
                 </AboutComp>
+                <div class="divider"></div>
+                <div class="place-items-center text-center">
+                    <h1 class="font-header font-semibold uppercase sm:text-4xl lg:text-5xl">{"Check Out My Recent Projects!"}</h1>
+                </div>
+                <div class="flex lg:flex-row items-center py-20 overscroll-x-auto overflow-x-auto lg:flex-nowrap flex-wrap justify-center">
+                    <ProjectCard/>
+                    <ProjectCard/>
+                    <ProjectCard/>
+                    <ProjectCard/>
+                </div>
             </section>
         )
     }

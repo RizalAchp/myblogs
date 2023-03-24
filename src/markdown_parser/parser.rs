@@ -20,7 +20,7 @@ pub fn render_markdown(src: &str) -> Html {
             Event::End(tag) => {
                 let line_len = spine.len();
                 let mut top = spine.pop().unwrap();
-                if let Tag::CodeBlock(codetag) = tag {
+                if let Tag::CodeBlock(_) = tag {
                     let mut pre = VTag::new("pre");
                     pre.add_child(top.into());
                     top = pre;
